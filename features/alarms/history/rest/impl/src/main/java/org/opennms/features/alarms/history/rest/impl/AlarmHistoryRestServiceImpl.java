@@ -44,22 +44,26 @@ public class AlarmHistoryRestServiceImpl implements AlarmHistoryRestService {
     }
 
     @Override
-    public Collection<AlarmState> getStatesForAlarmWithDbId(int alarmId) {
-        return alarmHistoryRepository.getStatesForAlarmWithDbId(alarmId);
+    public Collection<AlarmState> getStatesForAlarm(String alarmId, String matchType) {
+        if ("alarm-id".equals(matchType)) {
+            return alarmHistoryRepository.getStatesForAlarmWithDbId(Integer.valueOf(alarmId));
+        }
+        return alarmHistoryRepository.getStatesForAlarmWithReductionKey(alarmId);
     }
 
     @Override
-    public Collection<AlarmState> getStatesForAlarmWithReductionKey(String reductionKey) {
-        return alarmHistoryRepository.getStatesForAlarmWithReductionKey(reductionKey);
+    public AlarmState getAlarm(String alarmId, String matchType, Long time) {
+        long timestampInMillis = time == null ? System.currentTimeMillis() : time;
+        if ("alarm-id".equals(matchType)) {
+            return alarmHistoryRepository.getAlarmWithDbIdAt(Integer.valueOf(alarmId), timestampInMillis);
+        }
+        return alarmHistoryRepository.getAlarmWithReductionKeyIdAt(alarmId, timestampInMillis);
     }
 
     @Override
-    public Collection<AlarmState> getActiveAlarmsAt(long timestampInMillis) {
+    public Collection<AlarmState> getActiveAlarmsAt(Long time) {
+        long timestampInMillis = time == null ? System.currentTimeMillis() : time;
         return alarmHistoryRepository.getActiveAlarmsAt(timestampInMillis);
     }
 
-    @Override
-    public Collection<AlarmState> getActiveAlarmsNow() {
-        return alarmHistoryRepository.getActiveAlarmsNow();
-    }
 }

@@ -51,22 +51,24 @@ import org.opennms.features.alarms.history.api.AlarmState;
  * ?match-type=alarm-id   (default to =reduction-key)
  * ?at=3423842384834      (default to =$now)
  */
-@Path("alarm/")
+@Path("alarm/history")
 public interface AlarmHistoryRestService {
 
     @GET
-    @Path("history/{alarmId}/journal")
+    @Path("{alarmId}/journal")
     @Produces(MediaType.APPLICATION_JSON)
-    Collection<AlarmState> getStatesForAlarm(@PathParam("alarmId") String alarmId, @QueryParam("match-type") String matchType, @QueryParam("at") long time);
+    Collection<AlarmState> getStatesForAlarm(@PathParam("alarmId") String alarmId,
+            @QueryParam("match-type") String matchType);
 
     @GET
-    @Path("history/{alarmId}")
+    @Path("{alarmId}")
     @Produces(MediaType.APPLICATION_JSON)
-    Collection<AlarmState> getStatesForAlarmWithReductionKey(@PathParam("reductionKey") String reductionKey);
+    AlarmState getAlarm(@PathParam("alarmId") String alarmId,
+            @QueryParam("match-type") String matchType,
+            @QueryParam("at") Long time);
 
     @GET
-    @Path("history")
     @Produces(MediaType.APPLICATION_JSON)
-    Collection<AlarmState> getActiveAlarmsAt(@PathParam("timestampInMillis") long timestampInMillis);
+    Collection<AlarmState> getActiveAlarmsAt(@QueryParam("at") Long timestampInMillis);
 
 }
