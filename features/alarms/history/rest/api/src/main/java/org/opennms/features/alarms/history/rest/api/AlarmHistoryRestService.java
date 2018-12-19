@@ -51,7 +51,7 @@ import org.opennms.features.alarms.history.api.AlarmState;
  * ?match-type=alarm-id   (default to =reduction-key)
  * ?at=3423842384834      (default to =$now)
  */
-@Path("alarm/history")
+@Path("alarms/history")
 public interface AlarmHistoryRestService {
 
     @GET
