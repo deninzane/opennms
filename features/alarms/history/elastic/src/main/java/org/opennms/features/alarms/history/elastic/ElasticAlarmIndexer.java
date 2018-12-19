@@ -211,7 +211,7 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
                             final List<AlarmDocumentDTO> alarms = new LinkedList<>();
                             Integer afterAlarmWithId = null;
                             while (true) {
-                                final String query = queryProvider.getActiveAlarmsAtTimeAndExclude(time, includeUpdatesAfter, alarmIdsToKeep, afterAlarmWithId);
+                                final String query = queryProvider.getActiveAlarmIdsAtTimeAndExclude(time, includeUpdatesAfter, alarmIdsToKeep, afterAlarmWithId);
                                 final Search search = new Search.Builder(query)
                                         // TODO: Smarter indexing
                                         .addIndex("opennms-alarms-*")

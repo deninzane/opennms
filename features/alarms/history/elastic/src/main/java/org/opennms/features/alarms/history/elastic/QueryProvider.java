@@ -105,7 +105,19 @@ public class QueryProvider {
         return render("get_alarms_at.ftl", builder.build());
     }
 
-    public String getActiveAlarmsAtTimeAndExclude(long time, long after, Set<Integer> alarmIdsToKeep, Integer afterAlarmWithId) {
+    public String getActiveAlarmIdsAt(long time, long after, Integer afterAlarmWithId) {
+        final ImmutableMap.Builder<Object,Object> builder = ImmutableMap.builder()
+                .put("fromMillis", after)
+                .put("toMillis", time)
+                .put("maxBuckets", MAX_BUCKETS)
+                .put("idOnly", true);
+        if (afterAlarmWithId != null) {
+            builder.put("afterAlarmWithId", afterAlarmWithId);
+        }
+        return render("get_alarms_at.ftl", builder.build());
+    }
+
+    public String getActiveAlarmIdsAtTimeAndExclude(long time, long after, Set<Integer> alarmIdsToKeep, Integer afterAlarmWithId) {
         final ImmutableMap.Builder<Object,Object> builder = ImmutableMap.builder()
                 .put("fromMillis", after)
                 .put("toMillis", time)

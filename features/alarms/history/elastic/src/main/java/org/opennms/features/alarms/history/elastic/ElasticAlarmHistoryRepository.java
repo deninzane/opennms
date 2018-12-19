@@ -109,11 +109,7 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     @Override
     public long getNumActiveAlarmsAt(long time) {
-        // TODO: Only retrieve the count, instead of
-        // actually retrieving and mapping all the documents back
-        long numActiveAlarms = getActiveAlarmsAt(time).size();
-        LOG.debug("Found {} active alarms at {}.", numActiveAlarms, time);
-        return numActiveAlarms;
+        return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmIdsAt(time, Math.max(time - lookbackPeriodMs, 0), afterAlarmWithId)).size();
     }
 
     @Override

@@ -32,6 +32,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 
+import java.util.Collections;
 import java.util.Map;
 
 import org.junit.Test;
@@ -52,6 +53,7 @@ public class QueryProviderTest {
         validate(queryProvider.getAlarmByReductionKeyAt("string-with-some-special-characters\"\r\n[]{}\t+'",1, 1));
         validate(queryProvider.getActiveAlarmsAt(1, 1, null));
         validate(queryProvider.getAllAlarms(99));
+        validate(queryProvider.getActiveAlarmIdsAtTimeAndExclude(1,1, Collections.emptySet(),null));
     }
 
     private void validate(String query) {
