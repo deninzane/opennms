@@ -57,7 +57,6 @@ import org.opennms.netmgt.flows.classification.ClassificationEngine;
 import org.opennms.netmgt.flows.classification.ClassificationRequest;
 import org.opennms.netmgt.flows.classification.persistence.api.Protocol;
 import org.opennms.netmgt.flows.classification.persistence.api.Protocols;
-import org.opennms.netmgt.flows.elastic.index.IndexSelector;
 import org.opennms.netmgt.flows.filter.api.Filter;
 import org.opennms.netmgt.flows.filter.api.TimeRangeFilter;
 import org.opennms.netmgt.model.OnmsNode;
@@ -65,6 +64,7 @@ import org.opennms.netmgt.model.OnmsSnmpInterface;
 import org.opennms.plugins.elasticsearch.rest.bulk.BulkException;
 import org.opennms.plugins.elasticsearch.rest.bulk.BulkRequest;
 import org.opennms.plugins.elasticsearch.rest.bulk.BulkWrapper;
+import org.opennms.plugins.elasticsearch.rest.index.IndexSelector;
 import org.opennms.plugins.elasticsearch.rest.index.IndexStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -573,7 +573,7 @@ public class ElasticFlowRepository implements FlowRepository {
         Search.Builder builder = new Search.Builder(query)
                 .addType(TYPE);
         if(timeRangeFilter != null) {
-            final List<String> indices = indexSelector.getIndexNames(timeRangeFilter);
+            final List<String> indices = indexSelector.getIndexNames(timeRangeFilter.getStart(), timeRangeFilter.getEnd());
             builder.addIndices(indices);
             builder.setParameter("ignore_unavailable", "true"); // ignore unknown index
 
