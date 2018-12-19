@@ -28,39 +28,16 @@
 
 package org.opennms.netmgt.events.commands;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.Option;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.opennms.netmgt.daemon.DaemonInfo;
-import org.opennms.netmgt.daemon.DaemonService;
 
 @Command(scope = "daemon", name = "list", description = "List all daemons")
 @Service
 public class DaemonListCommand implements Action {
 
-    @Reference
-    private DaemonService daemonService;
-
-    @Option(name="-a", description = "Show all daemons. By default only enabled AND reloadable daemons are shown")
-    private boolean showAll = false;
-
     @Override
     public Object execute() throws Exception {
-        final List<DaemonInfo> daemons = daemonService.getDaemons()
-                .stream()
-                .filter(d -> !d.isInternal() && (showAll || d.isReloadable() && d.isEnabled()))
-                .sorted(Comparator.comparing(DaemonInfo::getName))
-                        .collect(Collectors.toList());
-        final int maxDaemonName = daemons.stream().mapToInt(d -> d.getName().length()).max().getAsInt();
-        final String format = String.format("%%-%ds     %%-%ds     %%s", maxDaemonName, "Enabled".length());
-        System.out.println(String.format(format, "Name", "Enabled", "Reloadable"));
-        daemons.forEach(d -> System.out.println(String.format(format, d.getName(), d.isEnabled(), d.isReloadable())));
         return null;
     }
 }
