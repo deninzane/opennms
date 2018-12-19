@@ -34,6 +34,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import org.opennms.features.alarms.history.api.AlarmState;
@@ -50,27 +51,22 @@ import org.opennms.features.alarms.history.api.AlarmState;
  * ?match-type=alarm-id   (default to =reduction-key)
  * ?at=3423842384834      (default to =$now)
  */
-@Path("alarm-history")
+@Path("alarm/")
 public interface AlarmHistoryRestService {
 
     @GET
-    @Path("/states/by-alarm-id/{alarmId}")
+    @Path("history/{alarmId}/journal")
     @Produces(MediaType.APPLICATION_JSON)
-    Collection<AlarmState> getStatesForAlarmWithDbId(@PathParam("alarmId") int alarmId);
+    Collection<AlarmState> getStatesForAlarm(@PathParam("alarmId") String alarmId, @QueryParam("match-type") String matchType, @QueryParam("at") long time);
 
     @GET
-    @Path("/states/by-reduction-key/{reductionKey}")
+    @Path("history/{alarmId}")
     @Produces(MediaType.APPLICATION_JSON)
     Collection<AlarmState> getStatesForAlarmWithReductionKey(@PathParam("reductionKey") String reductionKey);
 
     @GET
-    @Path("/states/at/{timestampInMillis}")
+    @Path("history")
     @Produces(MediaType.APPLICATION_JSON)
     Collection<AlarmState> getActiveAlarmsAt(@PathParam("timestampInMillis") long timestampInMillis);
-
-    @GET
-    @Path("/states")
-    @Produces(MediaType.APPLICATION_JSON)
-    Collection<AlarmState> getActiveAlarmsNow();
 
 }
