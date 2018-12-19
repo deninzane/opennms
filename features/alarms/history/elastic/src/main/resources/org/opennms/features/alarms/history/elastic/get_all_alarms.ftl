@@ -8,7 +8,7 @@
 <#if afterAlarmWithId?has_content>
         "after": { "alarm_id": ${afterAlarmWithId?long?c} },
 </#if>
-        "size": 1000 <#-- This is the maximum number of buckets that can be processed in one request.
+        "size": ${maxBuckets?long?c} <#-- This is the maximum number of buckets that can be processed in one request.
                           Subsequent requests should be made to page through the results -->
       },
       "aggs": {

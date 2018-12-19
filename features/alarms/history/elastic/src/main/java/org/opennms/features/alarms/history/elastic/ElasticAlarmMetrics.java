@@ -42,14 +42,12 @@ public class ElasticAlarmMetrics {
 
     private final Histogram bulkIndexSizeHistogram;
     private final Timer bulkIndexTimer;
-    private final Timer deleteTimer;
     private final Timer bulkDeleteTimer;
     private final Counter tasksFailedCounter;
 
     public ElasticAlarmMetrics(MetricRegistry metrics, BlockingQueue<Task> taskQueue) {
         bulkIndexSizeHistogram = metrics.histogram("bulk-index-size");
         bulkIndexTimer = metrics.timer("bulk-index-timer");
-        deleteTimer = metrics.timer("delete-timer");
         bulkDeleteTimer = metrics.timer("bulk-delete-timer");
         tasksFailedCounter = metrics.counter("tasks-failed");
         metrics.register("task-queue-size", (Gauge<Integer>) taskQueue::size);
@@ -63,9 +61,6 @@ public class ElasticAlarmMetrics {
         return bulkIndexTimer;
     }
 
-    public Timer getDeleteTimer() {
-        return deleteTimer;
-    }
 
     public Timer getBulkDeleteTimer() {
         return bulkDeleteTimer;

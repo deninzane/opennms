@@ -46,6 +46,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.opennms.core.cache.Cache;
@@ -114,6 +115,8 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
      **/
     private long alarmReindexDurationMs = TimeUnit.HOURS.toMillis(1);
 
+    private long lookbackPeriodMs = ElasticAlarmHistoryRepository.DEFAULT_LOOKBACK_PERIOD_MS;
+
     private final List<AlarmDocumentDTO> alarmDocumentsToIndex = new LinkedList<>();
 
     private Map<Integer, AlarmDocumentDTO> alarmDocumentsById = new LinkedHashMap<>();
@@ -173,6 +176,7 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
 
     @Override
     public void run() {
+        final AtomicLong lastbulkDeleteWithNoChanges = new AtomicLong(-1);
         templateInitializer.initialize();
         while(!stopped.get()) {
             try {
@@ -195,13 +199,19 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
 
                     @Override
                     public void deleteAlarmsWithoutIdsIn(Set<Integer> alarmIdsToKeep, long time) {
+                        // If we have succesfully performed a bulk delete with no changes, then we know
+                        // that all of the alarms before that time that should have been marked as deleted
+                        // were in fact deleted. Since any additional inserts will happen *after* this time
+                        // we can safely reduce the window size and only evaluate documents that were added
+                        // after this time in subsequent queries in order to help reduce the workload
+                        final long includeUpdatesAfter = Math.min(lastbulkDeleteWithNoChanges.get(), Math.max(time - lookbackPeriodMs, 0));
                         LOG.debug("Marking documents without ids in: {} as deleted for time: {}", alarmIdsToKeep, time);
                         try (final Timer.Context ctx = alarmsToESMetrics.getBulkDeleteTimer().time()) {
                             // Find all of the alarms at time X, excluding ids in Y - handle deletes for each of those
                             final List<AlarmDocumentDTO> alarms = new LinkedList<>();
                             Integer afterAlarmWithId = null;
                             while (true) {
-                                final String query = queryProvider.getActiveAlarmsAtTimeAndExclude(time, alarmIdsToKeep, afterAlarmWithId);
+                                final String query = queryProvider.getActiveAlarmsAtTimeAndExclude(time, includeUpdatesAfter, alarmIdsToKeep, afterAlarmWithId);
                                 final Search search = new Search.Builder(query)
                                         // TODO: Smarter indexing
                                         .addIndex("opennms-alarms-*")
@@ -254,6 +264,8 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
                                 }
                             } else {
                                 LOG.debug("Did not find any extraneous alarms that need to be deleted.");
+                                // Save the current time
+                                lastbulkDeleteWithNoChanges.set(time);
                             }
                         }
 
@@ -423,6 +435,10 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
 
     public void setAlarmReindexDurationMs(long alarmReindexDurationMs) {
         this.alarmReindexDurationMs = alarmReindexDurationMs;
+    }
+
+    public void setLookbackPeriodMs(long lookbackPeriodMs) {
+        this.lookbackPeriodMs = lookbackPeriodMs;
     }
 
     public void setIndexStrategy(IndexStrategy indexStrategy) {

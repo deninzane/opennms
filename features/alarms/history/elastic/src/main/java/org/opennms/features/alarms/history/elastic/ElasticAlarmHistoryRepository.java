@@ -29,10 +29,10 @@
 package org.opennms.features.alarms.history.elastic;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,9 +51,13 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(ElasticAlarmHistoryRepository.class);
 
+    public static final long DEFAULT_LOOKBACK_PERIOD_MS = TimeUnit.DAYS.toMillis(7);
+
     private final JestClient client;
 
     private final QueryProvider queryProvider = new QueryProvider();
+
+    private long lookbackPeriodMs = DEFAULT_LOOKBACK_PERIOD_MS;
 
     public ElasticAlarmHistoryRepository(JestClient client) {
         this.client = Objects.requireNonNull(client);
@@ -61,14 +65,14 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     @Override
     public AlarmState getAlarmWithDbIdAt(long id, long time) {
-        return findAlarms(queryProvider.getAlarmByDbIdAt(id, time))
+        return findAlarms(queryProvider.getAlarmByDbIdAt(id, time, Math.max(time - lookbackPeriodMs, 0)))
                 .stream().findFirst()
                 .orElse(null);
     }
 
     @Override
     public AlarmState getAlarmWithReductionKeyIdAt(String reductionKey, long time) {
-        return findAlarms(queryProvider.getAlarmByReductionKeyAt(reductionKey, time))
+        return findAlarms(queryProvider.getAlarmByReductionKeyAt(reductionKey, time, Math.max(time - lookbackPeriodMs, 0)))
                 .stream().findFirst()
                 .orElse(null);
     }
@@ -91,7 +95,7 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     @Override
     public List<AlarmState> getActiveAlarmsAt(long time) {
-        return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmsAt(time, afterAlarmWithId)).stream()
+        return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmsAt(time, Math.max(time - lookbackPeriodMs, 0), afterAlarmWithId)).stream()
                 .map(a -> (AlarmState)a)
                 .collect(Collectors.toList());
     }
@@ -187,4 +191,7 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
         return hits.stream().map(h -> h.source).collect(Collectors.toList());
     }
 
+    public void setLookbackPeriodMs(long lookbackPeriodMs) {
+        this.lookbackPeriodMs = lookbackPeriodMs;
+    }
 }

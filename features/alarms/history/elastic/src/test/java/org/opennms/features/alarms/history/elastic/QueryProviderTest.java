@@ -48,9 +48,9 @@ public class QueryProviderTest {
     @Test
     public void canGenerateQueries() {
         QueryProvider queryProvider = new QueryProvider();
-        validate(queryProvider.getAlarmByDbIdAt(1,1));
-        validate(queryProvider.getAlarmByReductionKeyAt("string-with-some-special-characters\"\r\n[]{}\t+'",1));
-        validate(queryProvider.getActiveAlarmsAt(1, null));
+        validate(queryProvider.getAlarmByDbIdAt(1,1, 1));
+        validate(queryProvider.getAlarmByReductionKeyAt("string-with-some-special-characters\"\r\n[]{}\t+'",1, 1));
+        validate(queryProvider.getActiveAlarmsAt(1, 1, null));
         validate(queryProvider.getAllAlarms(99));
     }
 

@@ -14,7 +14,15 @@
         {
           "range": {
             "@update-time": {
-              "lte": ${time?long?c},
+              "gte": ${fromMillis?long?c},
+              "format": "epoch_millis"
+            }
+          }
+        },
+        {
+          "range": {
+            "@update-time": {
+              "lte": ${toMillis?long?c},
               "format": "epoch_millis"
             }
           }

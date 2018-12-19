@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import org.elasticsearch.index.reindex.ReindexPlugin;
 import org.elasticsearch.painless.PainlessPlugin;
@@ -106,17 +107,17 @@ public class ElasticAlarmIndexerIT {
     public void canHandleAlarmSnapshots() {
         // Use some value N that is greater than the the size used for the composite aggregations in the query
         // in order to verify that the pagination is working properly
-        final int N = 2000;
+        final long N = QueryProvider.MAX_BUCKETS * 2;
         final long now = PseudoClock.getInstance().getTime();
-        final List<OnmsAlarm> alarms = IntStream.range(0, N)
-                .mapToObj(i -> createAlarm(i, now))
+        final List<OnmsAlarm> alarms = LongStream.range(0, N)
+                .mapToObj(i -> createAlarm((int)i, now))
                 .collect(Collectors.toList());
 
         // Trigger the snapshot
         issueSnapshotWithPreAndPostCalls(alarms);
 
         // Wait for the alarms to be indexed
-        await().atMost(1, TimeUnit.MINUTES).until(() -> alarmHistoryRepo.getNumActiveAlarmsNow(), equalTo((long)N));
+        await().atMost(1, TimeUnit.MINUTES).until(() -> alarmHistoryRepo.getNumActiveAlarmsNow(), equalTo(N));
 
         // Now trigger another snapshot with an empty list of alarms
         issueSnapshotWithPreAndPostCalls(Collections.emptyList());

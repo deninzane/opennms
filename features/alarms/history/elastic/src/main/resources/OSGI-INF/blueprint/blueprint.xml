@@ -45,6 +45,7 @@
             <cm:property name="bulkRetryCount" value="3" /> <!-- Number of retries until a bulk operation is considered failed -->
             <cm:property name="alarmReindexDurationMs" value="3600000" /> <!-- Number of milliseconds to wait before re-indexing an alarm if nothing "interesting" has changed -->
             <cm:property name="taskQueueCapacity" value="5000" />
+            <cm:property name="lookbackPeriodMs" value="604800000" /> <!-- Number of milliseconds to go back when searching for alarms -->
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -135,6 +136,7 @@
         <property name="bulkRetryCount" value="${bulkRetryCount}" />
         <property name="batchSize" value="${batchIndexSize}" />
         <property name="alarmReindexDurationMs" value="${alarmReindexDurationMs}"/>
+        <property name="lookbackPeriodMs" value="${lookbackPeriodMs}"/>
     </bean>
     <!-- Register for alarm callbacks -->
     <service ref="elasticAlarmIndexer" interface="org.opennms.netmgt.alarmd.api.AlarmLifecycleListener">
@@ -146,6 +148,7 @@
     <!-- The repository -->
     <bean id="elasticAlarmHistoryRepository" class="org.opennms.features.alarms.history.elastic.ElasticAlarmHistoryRepository">
         <argument ref="jestClient"/>
+        <property name="lookbackPeriodMs" value="${lookbackPeriodMs}"/>
     </bean>
     <service ref="elasticAlarmHistoryRepository" interface="org.opennms.features.alarms.history.api.AlarmHistoryRepository"/>
 
