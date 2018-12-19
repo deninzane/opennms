@@ -32,21 +32,21 @@
               "_id": "HcsLj2cBX4bJUQHomMHP",
               "_score": null,
               "_source": {
-                "@first-event-time": 1,
-                "@last-event-time": 1,
-                "@update-time": 1,
+                "@first_event_time": 1,
+                "@last_event_time": 1,
+                "@update_time": 1,
                 "@version": 1,
                 "id": 1,
-                "reduction-key": "1",
+                "reduction_key": "1",
                 "counter": 1,
-                "severity-id": 1,
-                "severity-label": "INDETERMINATE",
-                "last-event": {
+                "severity_id": 1,
+                "severity_label": "INDETERMINATE",
+                "last_event": {
                   "id": 1
                 },
                 "attributes": {},
-                "related-alarm-ids": [],
-                "related-alarm-reduction-keys": [],
+                "related_alarm_ids": [],
+                "related_alarm_reduction_keys": [],
                 "situation": false,
                 "archived": false
               },

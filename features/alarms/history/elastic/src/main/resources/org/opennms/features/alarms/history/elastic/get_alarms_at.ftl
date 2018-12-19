@@ -14,7 +14,7 @@
       "filter": [
         {
           "range": {
-            "@update-time": {
+            "@update_time": {
               "gte": ${fromMillis?long?c},
               "format": "epoch_millis"
             }
@@ -22,7 +22,7 @@
         },
         {
           "range": {
-            "@update-time": {
+            "@update_time": {
               "lte": ${toMillis?long?c},
               "format": "epoch_millis"
             }
@@ -54,7 +54,7 @@
             </#if>
             "sort": [
               {
-                "@update-time": {
+                "@update_time": {
                   "order": "desc"
                 }
               }
@@ -64,7 +64,7 @@
         },
         "any_deletes": {
             "sum": {
-                "field": "@deleted-time"
+                "field": "@deleted_time"
             }
         },
         "delete_bucket_filter": {

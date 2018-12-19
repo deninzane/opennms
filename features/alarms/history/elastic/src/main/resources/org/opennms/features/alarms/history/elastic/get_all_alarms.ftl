@@ -16,7 +16,7 @@
           "top_hits": {
             "sort": [
               {
-                "@update-time": {
+                "@update_time": {
                   "order": "desc"
                 }
               }

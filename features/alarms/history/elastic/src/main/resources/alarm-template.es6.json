@@ -1,215 +1,297 @@
 {
-  "order": 1,
-  "index_patterns":"opennms-alarms-*",
+  "aliases": {},
+  "index_patterns": "opennms-alarms-*",
   "mappings": {
     "alarm": {
       "_meta": {
         "version": "1.0.0"
       },
       "dynamic_templates": [],
-      "properties":{
+      "properties": {
+        "@deleted_time": {
+          "format": "epoch_millis",
+          "type": "date"
+        },
+        "@first_event_time": {
+          "format": "epoch_millis",
+          "type": "date"
+        },
+        "@last_event_time": {
+          "format": "epoch_millis",
+          "type": "date"
+        },
+        "@update_time": {
+          "format": "epoch_millis",
+          "type": "date"
+        },
         "@version": {
           "type": "keyword"
         },
-        "@first-event-time": {
-          "type": "date",
-          "format": "epoch_millis"
+        "ack_time": {
+          "format": "epoch_millis",
+          "type": "date"
         },
-        "@last-event-time": {
-          "type": "date",
-          "format": "epoch_millis"
+        "ack_user": {
+          "type": "text"
         },
-        "@update-time": {
-          "type": "date",
-          "format": "epoch_millis"
-        },
-        "@deleted-time": {
-          "type": "date",
-          "format": "epoch_millis"
-        },
-        "id": {
-          "type": "integer"
-        },
-        "reduction-key": {
+        "application_dn": {
           "type": "keyword"
-        },
-        "type": {
-          "type": "integer"
-        },
-        "counter": {
-          "type": "integer"
-        },
-        "severity-id": {
-          "type": "integer"
-        },
-        "severity-label": {
-          "type": "keyword"
-        },
-        "log-message": {
-          "type": "text"
-        },
-        "description": {
-          "type": "text"
-        },
-        "operator-instructions": {
-          "type": "text"
-        },
-        "situation": {
-          "type": "boolean"
         },
         "archived": {
           "type": "boolean"
         },
-        "archived-time": {
-          "type": "date",
-          "format": "epoch_millis"
-        },
-        "ack-time": {
-          "type": "date",
-          "format": "epoch_millis"
-        },
-        "ack-user": {
-          "type": "text"
-        },
-        "managed-object-instance": {
-          "type": "text"
-        },
-        "managed-object-type": {
-          "type": "text"
-        },
-        "related-alarm-ids": {
-          "type": "integer"
-        },
-        "related-alarm-reduction-keys": {
-          "type": "keyword"
+        "archived_time": {
+          "format": "epoch_millis",
+          "type": "date"
         },
         "attributes": {
           "dynamic": true,
           "type": "object"
         },
+        "clear_key": {
+          "type": "keyword"
+        },
+        "counter": {
+          "type": "integer"
+        },
+        "description": {
+          "type": "text"
+        },
+        "dist_poller": {
+          "dynamic": true,
+          "properties": {
+            "id": {
+              "type": "keyword"
+            },
+            "label": {
+              "type": "text"
+            },
+            "location": {
+              "type": "text"
+            }
+          },
+          "type": "object"
+        },
+        "first_automation_time": {
+          "format": "epoch_millis",
+          "type": "date"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "if_index": {
+          "type": "integer"
+        },
+        "ip_address": {
+          "type": "text"
+        },
+        "journal_memo": {
+          "dynamic": true,
+          "properties": {
+            "author": {
+              "type": "text"
+            },
+            "body": {
+              "type": "text"
+            },
+            "update_time": {
+              "format": "epoch_millis",
+              "type": "date"
+            }
+          },
+          "type": "object"
+        },
+        "last_automation_time": {
+          "format": "epoch_millis",
+          "type": "date"
+        },
+        "last_event": {
+          "dynamic": true,
+          "properties": {
+            "description": {
+              "type": "text"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "log_message": {
+              "type": "text"
+            },
+            "uei": {
+              "type": "text"
+            }
+          },
+          "type": "object"
+        },
+        "log_message": {
+          "type": "text"
+        },
+        "managed_object_instance": {
+          "type": "text"
+        },
+        "managed_object_type": {
+          "type": "text"
+        },
+        "mouse_over_text": {
+          "type": "text"
+        },
         "node": {
           "dynamic": true,
-          "type": "object",
           "properties": {
+            "categories": {
+              "type": "text"
+            },
+            "foreign_id": {
+              "type": "text"
+            },
+            "foreign_source": {
+              "type": "text"
+            },
             "id": {
               "type": "integer"
             },
             "label": {
               "type": "text"
-            },
-            "foreign-source": {
-              "type": "text"
-            },
-            "foreign-id": {
-              "type": "text"
-            },
-            "categories": {
-              "type": "text"
             }
-          }
+          },
+          "type": "object"
         },
-        "last-event": {
+        "operator_instructions": {
+          "type": "text"
+        },
+        "oss_primary_key": {
+          "type": "keyword"
+        },
+        "part_of_situation": {
+          "type": "boolean"
+        },
+        "qos_alarm_state": {
+          "type": "keyword"
+        },
+        "reduction_key": {
+          "type": "keyword"
+        },
+        "related_alarm_count": {
+          "type": "integer"
+        },
+        "related_alarm_ids": {
+          "type": "integer"
+        },
+        "related_alarm_reduction_keys": {
+          "type": "keyword"
+        },
+        "related_alarms": {
           "dynamic": true,
-          "type": "object",
           "properties": {
-            "uei": {
-              "type": "text"
+            "first_event_time": {
+              "format": "epoch_millis",
+              "type": "date"
             },
             "id": {
               "type": "integer"
             },
-            "log-message": {
-              "type": "text"
-            },
-            "description": {
-              "type": "text"
-            }
-          }
-        },
-        "sticky-memo": {
-          "dynamic": true,
-          "type": "object",
-          "properties": {
-            "body": {
-              "type": "text"
-            },
-            "author": {
-              "type": "text"
-            },
-            "update-time": {
-              "type": "date",
-              "format": "epoch_millis"
-            }
-          }
-        },
-        "journal-memo": {
-          "dynamic": true,
-          "type": "object",
-          "properties": {
-            "body": {
-              "type": "text"
-            },
-            "author": {
-              "type": "text"
-            },
-            "update-time": {
-              "type": "date",
-              "format": "epoch_millis"
-            }
-          }
-        },
-        "related-alarms": {
-          "dynamic": true,
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer"
-            },
-            "reduction-key": {
-              "type": "keyword"
-            },
-            "first-event-time": {
-              "type": "date",
-              "format": "epoch_millis"
-            },
-            "last-event-time": {
-              "type": "date",
-              "format": "epoch_millis"
-            },
-            "last-event": {
+            "last_event": {
               "dynamic": true,
-              "type": "object",
               "properties": {
-                "uei": {
+                "description": {
                   "type": "text"
                 },
                 "id": {
                   "type": "integer"
                 },
-                "log-message": {
+                "log_message": {
                   "type": "text"
                 },
-                "description": {
+                "uei": {
                   "type": "text"
                 }
-              }
+              },
+              "type": "object"
             },
-            "severity-id": {
-              "type": "integer"
+            "last_event_time": {
+              "format": "epoch_millis",
+              "type": "date"
             },
-            "severity-label": {
+            "managed_object_instance": {
+              "type": "text"
+            },
+            "managed_object_type": {
+              "type": "text"
+            },
+            "reduction_key": {
               "type": "keyword"
             },
-            "managed-object-instance": {
+            "severity_id": {
+              "type": "integer"
+            },
+            "severity_label": {
+              "type": "keyword"
+            }
+          },
+          "type": "object"
+        },
+        "service_name": {
+          "type": "keyword"
+        },
+        "service_type": {
+          "type": "keyword"
+        },
+        "severity_id": {
+          "type": "integer"
+        },
+        "severity_label": {
+          "type": "keyword"
+        },
+        "situation": {
+          "type": "boolean"
+        },
+        "sticky_memo": {
+          "dynamic": true,
+          "properties": {
+            "author": {
               "type": "text"
             },
-            "managed-object-type": {
+            "body": {
               "type": "text"
+            },
+            "update_time": {
+              "format": "epoch_millis",
+              "type": "date"
             }
-          }
+          },
+          "type": "object"
+        },
+        "suppressed_time": {
+          "format": "epoch_millis",
+          "type": "date"
+        },
+        "suppressed_until": {
+          "format": "epoch_millis",
+          "type": "date"
+        },
+        "suppressed_user": {
+          "type": "keyword"
+        },
+        "ticket_id": {
+          "type": "keyword"
+        },
+        "ticket_state_id": {
+          "type": "integer"
+        },
+        "ticket_state_name": {
+          "type": "text"
+        },
+        "type": {
+          "type": "integer"
+        },
+        "x733_alarm_type": {
+          "type": "keyword"
+        },
+        "x733_probable_cause": {
+          "type": "integer"
         }
       }
     }
   },
-  "aliases": {}
+  "order": 1
 }

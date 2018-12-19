@@ -48,13 +48,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.validation.constraints.NotNull;
 
 import org.opennms.core.cache.Cache;
 import org.opennms.core.cache.CacheBuilder;
 import org.opennms.core.cache.CacheConfig;
 import org.opennms.core.time.PseudoClock;
 import org.opennms.features.alarms.history.elastic.dto.AlarmDocumentDTO;
+import org.opennms.features.alarms.history.elastic.dto.AlarmDocumentFactory;
 import org.opennms.features.alarms.history.elastic.dto.NodeDocumentDTO;
+import org.opennms.core.utils.UniMapper;
+import org.opennms.features.alarms.history.elastic.mapping.MapStructDocumentImpl;
 import org.opennms.features.alarms.history.elastic.tasks.BulkDeleteTask;
 import org.opennms.features.alarms.history.elastic.tasks.IndexAlarmsTask;
 import org.opennms.features.alarms.history.elastic.tasks.Task;
@@ -73,6 +79,7 @@ import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -125,9 +132,9 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
             .build());
     private final AtomicBoolean stopped = new AtomicBoolean(false);
     private java.util.Timer timer;
-    private final DocumentMapper documentMapper;
+    private final UniMapper<OnmsAlarm, AlarmDocumentDTO> documentMapper;
+    private final AlarmDocumentFactory documentFactory;
 
-    private final Cache<Integer, Optional<NodeDocumentDTO>> nodeInfoCache;
     private final ElasticAlarmMetrics alarmsToESMetrics;
 
     public ElasticAlarmIndexer(MetricRegistry metrics, JestClient client, TemplateInitializer templateInitializer) {
@@ -137,17 +144,20 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
     public ElasticAlarmIndexer(MetricRegistry metrics, JestClient client, TemplateInitializer templateInitializer, CacheConfig nodeCacheConfig, int taskQueueCapacity) {
         this.client = Objects.requireNonNull(client);
         this.templateInitializer = Objects.requireNonNull(templateInitializer);
-        nodeInfoCache = new CacheBuilder<>()
+        //noinspection unchecked
+        Cache<Integer, Optional<NodeDocumentDTO>> nodeInfoCache = new CacheBuilder<>()
                 .withConfig(nodeCacheConfig)
                 .withCacheLoader(new CacheLoader<Integer, Optional<NodeDocumentDTO>>() {
                     @Override
-                    public Optional<NodeDocumentDTO> load(Integer nodeId) {
+                    public Optional<NodeDocumentDTO> load(@NotNull Integer nodeId) {
                         return Optional.empty();
                     }
                 }).build();
+        MapStructDocumentImpl documentImpl = new MapStructDocumentImpl(nodeInfoCache, this::getCurrentTimeMillis);
+        documentMapper = documentImpl;
+        documentFactory = documentImpl;
         taskQueue = new LinkedBlockingDeque<>(taskQueueCapacity);
         alarmsToESMetrics = new ElasticAlarmMetrics(metrics, taskQueue);
-        documentMapper = new DocumentMapper(nodeInfoCache, this::getCurrentTimeMillis);
     }
 
     public void init() {
@@ -251,7 +261,7 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
 
                             if (!alarms.isEmpty()) {
                                 final List<AlarmDocumentDTO> deletes = alarms.stream()
-                                        .map(a -> documentMapper.createAlarmDocumentForDelete(a.getId(), a.getReductionKey()))
+                                        .map(a -> documentFactory.createAlarmDocumentForDelete(a.getId(), a.getReductionKey()))
                                         .collect(Collectors.toList());
                                 if (LOG.isDebugEnabled()) {
                                     LOG.debug("Deleting alarms with IDs: {}", deletes.stream().map(a -> Integer.toString(a.getId()))
@@ -304,6 +314,7 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
         } catch (BulkException ex) {
             final List<FailedItem<AlarmDocumentDTO>> failedItems;
             if (ex.getBulkResult() != null) {
+                //noinspection unchecked
                 failedItems = ex.getBulkResult().getFailedItems();
             } else {
                 failedItems = Collections.emptyList();
@@ -330,9 +341,9 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
                 // Only consider updating, if we haven't already updated the alarm since the snapshot was taken
                 .filter(a -> !stateTracker.wasAlarmWithIdUpdated(a.getId()))
                 .map(this::getDocumentIfNeedsIndexing)
-                .filter(Objects::nonNull)
+                .flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
                 .collect(Collectors.toList());
-        if (alarmDocuments.size() > 0) {
+        if (!alarmDocuments.isEmpty()) {
             // Break the list up into small batches limited by the configured batch size
             for (List<AlarmDocumentDTO> partition : Lists.partition(alarmDocuments, batchSize)) {
                 taskQueue.add(new IndexAlarmsTask(partition));
@@ -340,9 +351,8 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
         }
 
         // Bulk delete alarms that are not yet marked as deleted in ES, and are not present in the given list
-        final Set<Integer> alarmIdsToKeep = new HashSet<>();
-        alarmIdsToKeep.addAll(stateTracker.getUpdatedAlarmIds());
-        alarms.stream().map(OnmsAlarm::getId).forEach(id -> alarmIdsToKeep.add(id));
+        final Set<Integer> alarmIdsToKeep = new HashSet<>(stateTracker.getUpdatedAlarmIds());
+        alarms.stream().map(OnmsAlarm::getId).forEach(alarmIdsToKeep::add);
         taskQueue.add(new BulkDeleteTask(alarmIdsToKeep, getCurrentTimeMillis()));
         alarmDocumentsById.keySet().removeIf(alarmId -> !alarmIdsToKeep.contains(alarmId));
     }
@@ -356,21 +366,20 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
     public synchronized void handleNewOrUpdatedAlarm(OnmsAlarm alarm) {
         LOG.debug("Got new or updated alarm callback for alarm with id: {} and reduction key: {}",
                 alarm.getId(), alarm.getReductionKey());
-        final AlarmDocumentDTO alarmDocument = getDocumentIfNeedsIndexing(alarm);
-        if (alarmDocument != null) {
-            alarmDocumentsToIndex.add(alarmDocument);
+        getDocumentIfNeedsIndexing(alarm).ifPresent(a -> {
+            alarmDocumentsToIndex.add(a);
             if (alarmDocumentsToIndex.size() >= batchSize) {
                 flushDocumentsToIndexToTaskQueue();
             }
             stateTracker.trackNewOrUpdatedAlarm(alarm.getId(), alarm.getReductionKey());
-        }
+        });
     }
 
     @Override
     public synchronized void handleDeletedAlarm(int alarmId, String reductionKey) {
         LOG.debug("Got delete callback for alarm with id: {} and reduction key: {}",
                 alarmId, reductionKey);
-        final AlarmDocumentDTO alarmDocument = documentMapper.createAlarmDocumentForDelete(alarmId, reductionKey);
+        final AlarmDocumentDTO alarmDocument = documentFactory.createAlarmDocumentForDelete(alarmId, reductionKey);
         alarmDocumentsToIndex.add(alarmDocument);
         if (alarmDocumentsToIndex.size() >= batchSize) {
             flushDocumentsToIndexToTaskQueue();
@@ -379,17 +388,54 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
     }
 
     private synchronized void flushDocumentsToIndexToTaskQueue() {
-        if (alarmDocumentsToIndex.size() > 0) {
+        if (!alarmDocumentsToIndex.isEmpty()) {
             taskQueue.add(new IndexAlarmsTask(new ArrayList<>(alarmDocumentsToIndex)));
             alarmDocumentsToIndex.clear();
         }
     }
 
-    private AlarmDocumentDTO getDocumentIfNeedsIndexing(OnmsAlarm alarm) {
+    /**
+     * Compares an {@link AlarmDocumentDTO alarm document} and a {@link OnmsAlarm alarm} on only interesting fields for
+     * logical equality. The interesting fields we are comparing are the fields we care about triggering a re-index for.
+     * If any of the interesting fields are unequal that will cause us to re-index the alarm.
+     *
+     * @param document the document to compare
+     * @param alarm    the alarm to compare
+     * @return whether or not the interesting fields are logically equal
+     */
+    private boolean interestingEquals(AlarmDocumentDTO document, OnmsAlarm alarm) {
+        Objects.requireNonNull(document);
+        Objects.requireNonNull(alarm);
+
+        if (document.getStickyMemo() == null && alarm.getStickyMemo() != null) {
+            return false;
+        }
+
+        if (document.getJournalMemo() == null && alarm.getReductionKeyMemo() != null) {
+            return false;
+        }
+
+        return Objects.equals(document.getReductionKey(), alarm.getReductionKey()) &&
+                Objects.equals(document.getAckTime(), alarm.getAckTime() == null ? null :
+                        alarm.getAckTime().getTime()) &&
+                Objects.equals(document.getSeverityId(), alarm.getSeverityId()) &&
+                Objects.equals(document.getRelatedAlarmIds(), alarm.getRelatedAlarmIds()) &&
+                Objects.equals(document.getStickyMemo() == null ? null : document.getStickyMemo().getUpdateTime(),
+                        alarm.getStickyMemo() == null ? null : alarm.getStickyMemo().getUpdated() == null ? null :
+                                alarm.getStickyMemo().getUpdated().getTime()) &&
+                Objects.equals(document.getJournalMemo() == null ? null : document.getJournalMemo().getUpdateTime(),
+                        alarm.getReductionKeyMemo() == null ? null :
+                                alarm.getReductionKeyMemo().getUpdated() == null ? null :
+                                        alarm.getReductionKeyMemo().getUpdated().getTime()) &&
+                Objects.equals(document.getTicketStateId(),
+                        alarm.getTTicketState() == null ? null : alarm.getTTicketState().getValue()) &&
+                Objects.equals(document.getSituation(), alarm.isSituation());
+    }
+
+    @VisibleForTesting
+    Optional<AlarmDocumentDTO> getDocumentIfNeedsIndexing(OnmsAlarm alarm) {
         final AlarmDocumentDTO existingAlarmDocument = alarmDocumentsById.get(alarm.getId());
 
-        // These conditions could be combined in a single mega-conditional
-        // but I find it easier to follow if kept separated
         boolean needsIndexing = false;
         if (indexAllUpdates) {
             needsIndexing = true;
@@ -397,24 +443,17 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
             needsIndexing = true;
         } else if (getCurrentTimeMillis() - existingAlarmDocument.getUpdateTime() >= alarmReindexDurationMs) {
             needsIndexing = true;
-        } else if (!Objects.equals(existingAlarmDocument.getReductionKey(), alarm.getReductionKey())
-                || !Objects.equals(existingAlarmDocument.getAckTime(), alarm.getAckTime() != null ? alarm.getAckTime().getTime() : null)
-                || !Objects.equals(existingAlarmDocument.getSeverityId(), alarm.getSeverity().getId())
-                || !Objects.equals(new HashSet<>(existingAlarmDocument.getRelatedAlarmIds()), alarm.getRelatedAlarmIds())) {
-            // TODO: Update list of "interesting" fields to include:
-            // sticky + journal memos
-            // ticket state
-            // is in a situation?
+        } else if (!interestingEquals(existingAlarmDocument, alarm)) {
             needsIndexing = true;
         }
 
-        if (!needsIndexing) {
-            return null;
+        if (needsIndexing) {
+            final AlarmDocumentDTO doc = documentMapper.to(alarm);
+            alarmDocumentsById.put(alarm.getId(), doc);
+            return Optional.of(doc);
         }
 
-        final AlarmDocumentDTO doc = documentMapper.toDocument(alarm);
-        alarmDocumentsById.put(alarm.getId(), doc);
-        return doc;
+        return Optional.empty();
     }
 
     private long getCurrentTimeMillis() {

@@ -26,9 +26,18 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.alarms.history.elastic.dto;
+package org.opennms.features.alarms.history.elastic.mapping;
 
-public enum MemoType {
-    STICKY,
-    JOURNAL
+import java.util.Date;
+
+import org.mapstruct.Mapper;
+
+/**
+ * Used by MapStruct to generate mapping code.
+ */
+@Mapper
+public interface DateMapper {
+    default Long map(Date date) {
+        return date == null ? null : date.getTime();
+    }
 }

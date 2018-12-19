@@ -28,61 +28,16 @@
 
 package org.opennms.features.alarms.history.elastic.dto;
 
-import com.google.gson.annotations.SerializedName;
-
-public class EventDocumentDTO {
-
-    @SerializedName("description")
-    private String description;
-
-    @SerializedName("id")
-    private Integer id;
-
-    @SerializedName("log_message")
-    private String logMessage;
-
-    @SerializedName("uei")
-    private String uei;
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getLogMessage() {
-        return logMessage;
-    }
-
-    public void setLogMessage(String logMessage) {
-        this.logMessage = logMessage;
-    }
-
-    public String getUei() {
-        return uei;
-    }
-
-    public void setUei(String uei) {
-        this.uei = uei;
-    }
-
-    @Override
-    public String toString() {
-        return "EventDocumentDTO{" +
-                "description='" + description + '\'' +
-                ", id=" + id +
-                ", logMessage='" + logMessage + '\'' +
-                ", uei='" + uei + '\'' +
-                '}';
-    }
+/**
+ * Factory for creating {@link AlarmDocumentDTO} objects.
+ */
+public interface AlarmDocumentFactory {
+    /**
+     * Creates a {@link AlarmDocumentDTO DTO} representing an alarm delete for the given alarm Id/reduction key.
+     *
+     * @param alarmId      the alarm Id
+     * @param reductionKey the alarm reduction key
+     * @return a DTO representing a delete for the given alarm Id/reduction key
+     */
+    AlarmDocumentDTO createAlarmDocumentForDelete(int alarmId, String reductionKey);
 }

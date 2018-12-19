@@ -30,59 +30,47 @@ package org.opennms.features.alarms.history.elastic.dto;
 
 import com.google.gson.annotations.SerializedName;
 
-public class EventDocumentDTO {
-
-    @SerializedName("description")
-    private String description;
-
+public class MonitoringSystemDTO {
+    
     @SerializedName("id")
-    private Integer id;
+    private String id;
 
-    @SerializedName("log_message")
-    private String logMessage;
+    @SerializedName("label")
+    private String label;
 
-    @SerializedName("uei")
-    private String uei;
+    @SerializedName("location")
+    private String location;
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Integer getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public String getLogMessage() {
-        return logMessage;
+    public String getLabel() {
+        return label;
     }
 
-    public void setLogMessage(String logMessage) {
-        this.logMessage = logMessage;
+    public void setLabel(String label) {
+        this.label = label;
     }
 
-    public String getUei() {
-        return uei;
+    public String getLocation() {
+        return location;
     }
 
-    public void setUei(String uei) {
-        this.uei = uei;
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     @Override
     public String toString() {
-        return "EventDocumentDTO{" +
-                "description='" + description + '\'' +
-                ", id=" + id +
-                ", logMessage='" + logMessage + '\'' +
-                ", uei='" + uei + '\'' +
+        return "MonitoringSystemDTO{" +
+                "id='" + id + '\'' +
+                ", label='" + label + '\'' +
+                ", location=" + location +
                 '}';
     }
 }

@@ -26,51 +26,20 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.alarms.history.elastic.dto;
+package org.opennms.features.alarms.history.elastic.mapping;
 
-import com.google.gson.annotations.SerializedName;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.opennms.features.alarms.history.elastic.dto.EventDocumentDTO;
+import org.opennms.netmgt.model.OnmsEvent;
 
-public class MemoDocumentDTO {
-
-    @SerializedName("author")
-    private String author;
-
-    @SerializedName("body")
-    private String body;
-
-    @SerializedName("update_time")
-    private Long updateTime;
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
-    public String getBody() {
-        return body;
-    }
-
-    public void setBody(String body) {
-        this.body = body;
-    }
-
-    public Long getUpdateTime() {
-        return updateTime;
-    }
-
-    public void setUpdateTime(Long updateTime) {
-        this.updateTime = updateTime;
-    }
-
-    @Override
-    public String toString() {
-        return "MemoDocumentDTO{" +
-                "author='" + author + '\'' +
-                ", body='" + body + '\'' +
-                ", updateTime=" + updateTime +
-                '}';
-    }
+/**
+ * Used by MapStruct to generate mapping code.
+ */
+@Mapper
+public interface EventMapper {
+    @Mapping(source = "eventUei", target = "uei")
+    @Mapping(source = "eventLogMsg", target = "logMessage")
+    @Mapping(source = "eventDescr", target = "description")
+    EventDocumentDTO map(OnmsEvent event);
 }

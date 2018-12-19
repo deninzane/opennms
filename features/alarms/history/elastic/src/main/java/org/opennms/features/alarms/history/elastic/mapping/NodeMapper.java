@@ -26,51 +26,28 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.alarms.history.elastic.dto;
+package org.opennms.features.alarms.history.elastic.mapping;
 
-import com.google.gson.annotations.SerializedName;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-public class MemoDocumentDTO {
+import org.mapstruct.Mapper;
+import org.opennms.features.alarms.history.elastic.dto.NodeDocumentDTO;
+import org.opennms.netmgt.model.OnmsCategory;
+import org.opennms.netmgt.model.OnmsNode;
 
-    @SerializedName("author")
-    private String author;
+/**
+ * Used by MapStruct to generate mapping code.
+ */
+@Mapper
+public interface NodeMapper {
+    NodeDocumentDTO map(OnmsNode node);
 
-    @SerializedName("body")
-    private String body;
-
-    @SerializedName("update_time")
-    private Long updateTime;
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
-    public String getBody() {
-        return body;
-    }
-
-    public void setBody(String body) {
-        this.body = body;
-    }
-
-    public Long getUpdateTime() {
-        return updateTime;
-    }
-
-    public void setUpdateTime(Long updateTime) {
-        this.updateTime = updateTime;
-    }
-
-    @Override
-    public String toString() {
-        return "MemoDocumentDTO{" +
-                "author='" + author + '\'' +
-                ", body='" + body + '\'' +
-                ", updateTime=" + updateTime +
-                '}';
+    default List<String> mapCategoriesToStrings(Set<OnmsCategory> categories) {
+        return categories == null ? Collections.emptyList() : categories.stream()
+                .map(OnmsCategory::getName)
+                .collect(Collectors.toList());
     }
 }

@@ -26,51 +26,18 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.alarms.history.elastic.dto;
+package org.opennms.features.alarms.history.elastic.mapping;
 
-import com.google.gson.annotations.SerializedName;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.opennms.features.alarms.history.elastic.dto.MemoDocumentDTO;
+import org.opennms.netmgt.model.OnmsMemo;
 
-public class MemoDocumentDTO {
-
-    @SerializedName("author")
-    private String author;
-
-    @SerializedName("body")
-    private String body;
-
-    @SerializedName("update_time")
-    private Long updateTime;
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
-    public String getBody() {
-        return body;
-    }
-
-    public void setBody(String body) {
-        this.body = body;
-    }
-
-    public Long getUpdateTime() {
-        return updateTime;
-    }
-
-    public void setUpdateTime(Long updateTime) {
-        this.updateTime = updateTime;
-    }
-
-    @Override
-    public String toString() {
-        return "MemoDocumentDTO{" +
-                "author='" + author + '\'' +
-                ", body='" + body + '\'' +
-                ", updateTime=" + updateTime +
-                '}';
-    }
+/**
+ * Used by MapStruct to generate mapping code.
+ */
+@Mapper(uses = DateMapper.class)
+public interface MemoMapper {
+    @Mapping(source = "updated", target = "updateTime")
+    MemoDocumentDTO map(OnmsMemo memo);
 }
