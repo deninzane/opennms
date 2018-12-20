@@ -42,9 +42,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.elasticsearch.index.reindex.ReindexPlugin;
 import org.elasticsearch.painless.PainlessPlugin;
-import org.hamcrest.Matchers;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.opennms.core.test.elastic.ElasticSearchRule;
@@ -54,6 +52,7 @@ import org.opennms.features.alarms.history.api.AlarmState;
 import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.netmgt.model.OnmsEvent;
 import org.opennms.plugins.elasticsearch.rest.RestClientFactory;
+import org.opennms.plugins.elasticsearch.rest.index.IndexStrategy;
 
 import com.codahale.metrics.MetricRegistry;
 import com.jayway.awaitility.Awaitility;
@@ -85,7 +84,7 @@ public class ElasticAlarmHistoryRepositoryIT {
     public void setUp() throws IOException {
         RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT);
         jestClient = restClientFactory.createClient();
-        repo = new ElasticAlarmHistoryRepository(jestClient);
+        repo = new ElasticAlarmHistoryRepository(jestClient, IndexStrategy.MONTHLY);
 
         TemplateInitializerForAlarms templateInitializer = new TemplateInitializerForAlarms(jestClient);
         MetricRegistry metrics = new MetricRegistry();

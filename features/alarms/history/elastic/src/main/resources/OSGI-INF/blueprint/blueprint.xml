@@ -150,6 +150,7 @@
     <!-- The repository -->
     <bean id="elasticAlarmHistoryRepository" class="org.opennms.features.alarms.history.elastic.ElasticAlarmHistoryRepository">
         <argument ref="jestClient"/>
+        <argument ref="indexStrategy"/>
         <property name="lookbackPeriodMs" value="${lookbackPeriodMs}"/>
     </bean>
     <service ref="elasticAlarmHistoryRepository" interface="org.opennms.features.alarms.history.api.AlarmHistoryRepository"/>

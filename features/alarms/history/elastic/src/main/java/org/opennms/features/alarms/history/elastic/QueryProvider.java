@@ -77,19 +77,19 @@ public class QueryProvider {
                 .build());
     }
 
-    public String getAlarmByDbIdAt(long id, long time, long after) {
+    public String getAlarmByDbIdAt(long id, TimeRange timeRange) {
         return render("get_alarm_at.ftl", ImmutableMap.builder()
                 .put("alarmId", id)
-                .put("fromMillis", after)
-                .put("toMillis", time)
+                .put("fromMillis", timeRange.getStart())
+                .put("toMillis", timeRange.getEnd())
                 .build());
     }
 
-    public String getAlarmByReductionKeyAt(String reductionKey, long time, long after) {
+    public String getAlarmByReductionKeyAt(String reductionKey, TimeRange timeRange) {
         return render("get_alarm_at.ftl", ImmutableMap.builder()
                 .put("reductionKey", reductionKey)
-                .put("fromMillis", after)
-                .put("toMillis", time)
+                .put("fromMillis", timeRange.getStart())
+                .put("toMillis", timeRange.getEnd())
                 .build());
     }
 

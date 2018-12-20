@@ -46,7 +46,6 @@ import org.elasticsearch.index.reindex.ReindexPlugin;
 import org.elasticsearch.painless.PainlessPlugin;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.opennms.core.test.alarms.driver.Scenario;
@@ -56,10 +55,10 @@ import org.opennms.core.test.elastic.ElasticSearchServerConfig;
 import org.opennms.core.time.PseudoClock;
 import org.opennms.features.alarms.history.api.AlarmHistoryRepository;
 import org.opennms.features.alarms.history.api.AlarmState;
-import org.opennms.netmgt.alarmd.AlarmLifecycleListenerManager;
 import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.netmgt.model.OnmsSeverity;
 import org.opennms.plugins.elasticsearch.rest.RestClientFactory;
+import org.opennms.plugins.elasticsearch.rest.index.IndexStrategy;
 
 import io.searchbox.client.JestClient;
 
@@ -99,7 +98,7 @@ public class ElasticAlarmHistoryBlackboxIT {
 
         RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT);
         jestClient = restClientFactory.createClient();
-        alarmHistoryRepo = new ElasticAlarmHistoryRepository(jestClient);
+        alarmHistoryRepo = new ElasticAlarmHistoryRepository(jestClient, IndexStrategy.MONTHLY);
 
         // Wait until ES is up and running - initially there should be no documents
         await().atMost(1, TimeUnit.MINUTES).pollInterval(5, TimeUnit.SECONDS)

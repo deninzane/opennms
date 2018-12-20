@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 import org.opennms.features.alarms.history.api.AlarmHistoryRepository;
 import org.opennms.features.alarms.history.api.AlarmState;
 import org.opennms.features.alarms.history.elastic.dto.AlarmDocumentDTO;
+import org.opennms.plugins.elasticsearch.rest.index.IndexSelector;
+import org.opennms.plugins.elasticsearch.rest.index.IndexStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,33 +55,43 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     public static final long DEFAULT_LOOKBACK_PERIOD_MS = TimeUnit.DAYS.toMillis(7);
 
+    public static final String INDEX_PREFIX = "opennms-alarms";
+
     private final JestClient client;
+
+    private final IndexSelector indexSelector;
+
+    private final IndexStrategy indexStrategy;
 
     private final QueryProvider queryProvider = new QueryProvider();
 
     private long lookbackPeriodMs = DEFAULT_LOOKBACK_PERIOD_MS;
 
-    public ElasticAlarmHistoryRepository(JestClient client) {
+    public ElasticAlarmHistoryRepository(JestClient client, IndexStrategy indexStrategy) {
         this.client = Objects.requireNonNull(client);
+        this.indexStrategy = Objects.requireNonNull(indexStrategy);
+        this.indexSelector = new IndexSelector(INDEX_PREFIX, indexStrategy, 0);
     }
 
     @Override
     public AlarmState getAlarmWithDbIdAt(long id, long time) {
-        return findAlarms(queryProvider.getAlarmByDbIdAt(id, time, Math.max(time - lookbackPeriodMs, 0)))
+        TimeRange timeRange = getTimeRange(time);
+        return findAlarms(queryProvider.getAlarmByDbIdAt(id, timeRange), timeRange)
                 .stream().findFirst()
                 .orElse(null);
     }
 
     @Override
     public AlarmState getAlarmWithReductionKeyIdAt(String reductionKey, long time) {
-        return findAlarms(queryProvider.getAlarmByReductionKeyAt(reductionKey, time, Math.max(time - lookbackPeriodMs, 0)))
+        TimeRange timeRange = getTimeRange(time);
+        return findAlarms(queryProvider.getAlarmByReductionKeyAt(reductionKey, timeRange), timeRange)
                 .stream().findFirst()
                 .orElse(null);
     }
 
     @Override
     public List<AlarmState> getStatesForAlarmWithDbId(long id) {
-        return findAlarms(queryProvider.getAlarmStatesByDbId(id))
+        return findAlarms(queryProvider.getAlarmStatesByDbId(id), null)
                 .stream()
                 .map(a -> (AlarmState)a)
                 .collect(Collectors.toList());
@@ -87,7 +99,7 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     @Override
     public List<AlarmState> getStatesForAlarmWithReductionKey(String reductionKey) {
-        return findAlarms(queryProvider.getAlarmStatesByReductionKey(reductionKey))
+        return findAlarms(queryProvider.getAlarmStatesByReductionKey(reductionKey), null)
                 .stream()
                 .map(a -> (AlarmState)a)
                 .collect(Collectors.toList());
@@ -95,6 +107,7 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     @Override
     public List<AlarmState> getActiveAlarmsAt(long time) {
+        TimeRange timeRange = getTimeRange(time);
         return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmsAt(time, Math.max(time - lookbackPeriodMs, 0), afterAlarmWithId)).stream()
                 .map(a -> (AlarmState)a)
                 .collect(Collectors.toList());
@@ -109,6 +122,7 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     @Override
     public long getNumActiveAlarmsAt(long time) {
+        TimeRange timeRange = getTimeRange(time);
         return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmIdsAt(time, Math.max(time - lookbackPeriodMs, 0), afterAlarmWithId)).size();
     }
 
@@ -167,15 +181,25 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
         return alarms;
     }
 
-    private List<AlarmDocumentDTO> findAlarms(String query) {
-        final Search search = new Search.Builder(query)
-                // TODO: Smarter indexing
-                .addIndex("opennms-alarms-*")
-                .addType(AlarmDocumentDTO.TYPE)
-                .build();
+    private TimeRange getTimeRange(long time) {
+        return new TimeRange(Math.max(time - lookbackPeriodMs, 0), time);
+    }
+
+    private List<AlarmDocumentDTO> findAlarms(String query, TimeRange timeRangeFilter) {
+        final Search.Builder search = new Search.Builder(query).addType(AlarmDocumentDTO.TYPE);
+        if (timeRangeFilter != null) {
+            final List<String> indices = indexSelector.getIndexNames(timeRangeFilter.getStart(), timeRangeFilter.getEnd());
+            search.addIndices(indices);
+            search.setParameter("ignore_unavailable", "true"); // ignore unknown index
+            LOG.debug("Executing asynchronous query on {}: {}", indices, query);
+        } else {
+            search.addIndex("opennms-alarms-*");
+            LOG.debug("Executing asynchronous query on all indices: {}", query);
+        }
+
         final SearchResult result;
         try {
-            result = client.execute(search);
+            result = client.execute(search.build());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
