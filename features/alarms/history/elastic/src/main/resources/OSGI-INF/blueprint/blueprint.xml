@@ -41,6 +41,7 @@
             <cm:property name="settings.index.routing_partition_size" value="" />
 
             <!-- Alarm History settings -->
+            <cm:property name="indexAllUpdates" value="false" />
             <cm:property name="batchIndexSize" value="200" /> <!-- Maximum number of records inserted in a single batch insert -->
             <cm:property name="bulkRetryCount" value="3" /> <!-- Number of retries until a bulk operation is considered failed -->
             <cm:property name="alarmReindexDurationMs" value="3600000" /> <!-- Number of milliseconds to wait before re-indexing an alarm if nothing "interesting" has changed -->
@@ -137,6 +138,7 @@
         <property name="batchSize" value="${batchIndexSize}" />
         <property name="alarmReindexDurationMs" value="${alarmReindexDurationMs}"/>
         <property name="lookbackPeriodMs" value="${lookbackPeriodMs}"/>
+        <property name="indexAllUpdates" value="${indexAllUpdates}"/>
     </bean>
     <!-- Register for alarm callbacks -->
     <service ref="elasticAlarmIndexer" interface="org.opennms.netmgt.alarmd.api.AlarmLifecycleListener">
