@@ -1318,7 +1318,7 @@
     <jasperreportsMavenPluginVersion>1.0-beta-4-OPENNMS-20160912-1</jasperreportsMavenPluginVersion>
     <jcifsVersion>1.3.14</jcifsVersion>
     <jcommonVersion>1.0.23</jcommonVersion>
-    <jettyVersion>9.4.2.v20170220</jettyVersion>
+    <jettyVersion>9.4.12.v20180830</jettyVersion>
     <jestVersion>5.3.3</jestVersion>
     <jestGsonVersion>${gsonVersion}</jestGsonVersion>
     <jfreechartVersion>1.0.19</jfreechartVersion>
@@ -1351,7 +1351,7 @@
     <paxWebVersion>4.3.0</paxWebVersion>
     <protobufVersion>2.6.1</protobufVersion>
     <protobuf3Version>3.5.1</protobuf3Version>
-    <postgresqlVersion>9.4.1211</postgresqlVersion>
+    <postgresqlVersion>42.2.5</postgresqlVersion>
     <powermockVersion>1.6.4</powermockVersion>
     <!-- TODO: Update to release artifact before tagging 24.0.0 -->
     <opennmsApiVersion>1.0.0-alpha2-SNAPSHOT</opennmsApiVersion>
