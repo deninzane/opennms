@@ -28,9 +28,10 @@
 
 package org.opennms.core.schema;
 
-import liquibase.resource.ResourceAccessor;
-
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.springframework.core.io.ResourceLoader;
+
+import liquibase.resource.ResourceAccessor;
 
 
 /**
@@ -51,6 +52,7 @@ public class Migration {
     private String m_adminPassword;
     private String m_changeLog;
     private ResourceAccessor m_accessor;
+    private ResourceLoader m_loader;
 
     /**
      * Get the JDBC connection URL.  Defaults to jdbc:postgresql://host/database.
@@ -216,6 +218,14 @@ public class Migration {
         m_changeLog = changeLog;
     }
     
+    public ResourceLoader getResourceLoader() {
+        return m_loader;
+    }
+
+    public void setResourceLoader(final ResourceLoader loader) {
+        m_loader = loader;
+    }
+
     public ResourceAccessor getAccessor() {
         return m_accessor;
     }
@@ -241,6 +251,7 @@ public class Migration {
             .append("user", m_databasePassword)
             .append("changelog", m_changeLog)
             .append("accessor", m_accessor)
+            .append("loader", m_loader)
             .toString();
     }
 }

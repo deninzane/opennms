@@ -60,8 +60,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
@@ -87,9 +89,45 @@ public class MigratorIT {
     @Autowired
     ApplicationContext m_context;
 
+    @Autowired
+    private TemporaryDatabase m_db;
+
     @Before
     public void setUp() throws Exception {
         MockLogAppender.setupLogging();
+    }
+
+    @Test
+    @JUnitTemporaryDatabase(createSchema=false)
+    public void testSimpleMigration() throws Exception {
+        assertFalse(changelogExists());
+
+        final Migrator migrator = new Migrator();
+        migrator.setAdminDataSource(m_db);
+        migrator.setDataSource(m_db);
+        migrator.setCreateDatabase(false);
+        migrator.setCreateUser(false);
+        migrator.setValidateDatabaseVersion(true);
+
+        final Migration migration = new Migration();
+
+        final String mockDbAdminUser = System.getProperty(TemporaryDatabase.ADMIN_USER_PROPERTY, TemporaryDatabase.DEFAULT_ADMIN_USER);
+        migration.setAdminUser(mockDbAdminUser);
+        migration.setDatabaseUser(mockDbAdminUser);
+
+        final String mockDbAdminPassword = System.getProperty(TemporaryDatabase.ADMIN_PASSWORD_PROPERTY, TemporaryDatabase.DEFAULT_ADMIN_PASSWORD);
+        migration.setAdminPassword(mockDbAdminPassword);
+        migration.setDatabasePassword(mockDbAdminPassword);
+
+        migration.setChangeLog("classpath*:/changelog.xml");
+        migration.setResourceLoader(new DefaultResourceLoader());
+
+        migrator.migrate(migration);
+
+        final JdbcTemplate template = new JdbcTemplate(m_db);
+        template.afterPropertiesSet();
+        final int rows = m_db.countRows("SELECT * FROM databasechangelog");
+        assertEquals(1, rows);
     }
 
     @Test

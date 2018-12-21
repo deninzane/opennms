@@ -30,12 +30,12 @@ package org.opennms.core.schema;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.util.Enumeration;
-
-import liquibase.resource.ResourceAccessor;
+import java.util.Collections;
+import java.util.Set;
 
 import org.springframework.core.io.Resource;
+
+import liquibase.resource.ResourceAccessor;
 
 public class ExistingResourceAccessor implements ResourceAccessor {
     private final Resource m_resource;
@@ -49,21 +49,14 @@ public class ExistingResourceAccessor implements ResourceAccessor {
     }
 
     @Override
-    public InputStream getResourceAsStream(final String file) throws IOException {
+    public Set<InputStream> getResourcesAsStream(final String path) throws IOException {
         if (m_resource == null) return null;
-        return m_resource.createRelative(file).getInputStream();
+        return Collections.singleton(m_resource.createRelative(path).getInputStream());
     }
 
     @Override
-    public Enumeration<URL> getResources(final String packageName) throws IOException {
+    public Set<String> list(String relativeTo, String path, boolean includeFiles, boolean includeDirectories, boolean recursive) throws IOException {
         throw new UnsupportedOperationException("Not yet implemented!");
-        /*
-        final Vector<URL> resources = new Vector<>();
-        if (m_resource != null) {
-            resources.add(m_resource.getURI().toURL());
-        }
-        return resources.elements();
-        */
     }
 
     @Override

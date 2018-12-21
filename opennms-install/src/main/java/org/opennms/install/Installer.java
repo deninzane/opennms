@@ -63,7 +63,6 @@ import org.opennms.core.db.DataSourceConfigurationFactory;
 import org.opennms.core.db.install.InstallerDb;
 import org.opennms.core.db.install.SimpleDataSource;
 import org.opennms.core.logging.Logging;
-import org.opennms.core.schema.ExistingResourceAccessor;
 import org.opennms.core.schema.Migration;
 import org.opennms.core.schema.Migrator;
 import org.opennms.core.utils.ConfigFileConstants;
@@ -74,7 +73,6 @@ import org.opennms.netmgt.icmp.best.BestMatchPingerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 
 /*
@@ -190,7 +188,7 @@ public class Installer {
             m_migration.setAdminPassword(adminDsConfig.getPassword());
             m_migration.setDatabaseUser(dsConfig.getUserName());
             m_migration.setDatabasePassword(dsConfig.getPassword());
-            m_migration.setChangeLog("changelog.xml");
+            m_migration.setChangeLog("classpath*:/changelog.xml");
         }
 
         checkIPv6();
@@ -269,11 +267,14 @@ public class Installer {
             m_installerDb.databaseSetUser();
             m_installerDb.disconnect();
 
+            m_migrator.migrate(m_migration);
+            /*
             for (final Resource resource : context.getResources("classpath*:/changelog.xml")) {
                 System.out.println("- Running migration for changelog: " + resource.getDescription());
                 m_migration.setAccessor(new ExistingResourceAccessor(resource));
                 m_migrator.migrate(m_migration);
             }
+            */
         }
 
         if (m_update_unicode) {
@@ -604,9 +605,6 @@ public class Installer {
         m_do_vacuum = m_commandLine.hasOption("v");
         m_webappdir = m_commandLine.getOptionValue("w", m_webappdir);
         m_installerDb.setDebug(m_commandLine.hasOption("x"));
-        if (m_commandLine.hasOption("x")) {
-        	m_migrator.enableDebug();
-        }
         m_fix_constraint_remove_rows = m_commandLine.hasOption("X");
         m_install_webapp = m_commandLine.hasOption("y");
         m_skip_upgrade_tools = m_commandLine.hasOption("S");

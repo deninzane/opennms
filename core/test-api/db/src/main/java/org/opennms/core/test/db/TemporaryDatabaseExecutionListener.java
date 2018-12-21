@@ -49,6 +49,8 @@ import org.opennms.core.db.HikariCPConnectionFactory;
 import org.opennms.core.db.XADataSourceFactory;
 import org.opennms.core.test.db.annotations.JUnitTemporaryDatabase;
 import org.opennms.netmgt.config.opennmsDataSources.JdbcDataSource;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.test.annotation.DirtiesContext.HierarchyMode;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestExecutionListener;
@@ -192,7 +194,7 @@ public class TemporaryDatabaseExecutionListener extends AbstractTestExecutionLis
 
         final Future<TemporaryDatabase> classDs;
         if (classJtd != null) {
-            classDs = pool.submit(new CreateNewDatabaseCallable(classJtd, testContext.getTestClass().getName(), null));
+            classDs = pool.submit(new CreateNewDatabaseCallable(classJtd, testContext.getTestClass().getName(), null, testContext));
             if (classJtd.reuseDatabase() == false) {
                 m_createNewDatabases = true;
             }
@@ -209,13 +211,13 @@ public class TemporaryDatabaseExecutionListener extends AbstractTestExecutionLis
                     // If there is a method-specific annotation, use it to create the temporary database
                     if (methodJtd != null) {
                         // Create a new database based on the method-specific annotation
-                        Future<TemporaryDatabase> submit = pool.submit(new CreateNewDatabaseCallable(methodJtd, testContext.getTestClass().getName(), method.getName()));
+                        Future<TemporaryDatabase> submit = pool.submit(new CreateNewDatabaseCallable(methodJtd, testContext.getTestClass().getName(), method.getName(), testContext));
                         Assert.notNull(submit, "pool.submit(new CreateNewDatabaseCallable(methodJtd = " + methodJtd + ")");
                         futures.add(submit);
                     } else if (classJtd != null) {
                         if (m_createNewDatabases) {
                             // Create a new database based on the test class' annotation
-                            Future<TemporaryDatabase> submit = pool.submit(new CreateNewDatabaseCallable(classJtd, testContext.getTestClass().getName(), method.getName()));
+                            Future<TemporaryDatabase> submit = pool.submit(new CreateNewDatabaseCallable(classJtd, testContext.getTestClass().getName(), method.getName(), testContext));
                             Assert.notNull(submit, "pool.submit(new CreateNewDatabaseCallable(classJtd = " + classJtd + ")");
                             futures.add(submit);
                         } else {
@@ -276,17 +278,25 @@ public class TemporaryDatabaseExecutionListener extends AbstractTestExecutionLis
         private final JUnitTemporaryDatabase m_jtd;
         private final String m_className;
         private final String m_methodName;
+        private final TestContext m_context;
 
 
-        public CreateNewDatabaseCallable(JUnitTemporaryDatabase jtd, String className, String methodName) {
+        public CreateNewDatabaseCallable(JUnitTemporaryDatabase jtd, String className, String methodName, TestContext testContext) {
             m_jtd = jtd;
             m_className = className;
             m_methodName = methodName;
+            m_context = testContext;
         }
 
         @Override
         public TemporaryDatabase call() throws Exception {
-            return createNewDatabase(m_jtd, m_className, m_methodName);
+            final TemporaryDatabase db = createNewDatabase(m_jtd, m_className, m_methodName);
+
+            final GenericApplicationContext context = ((GenericApplicationContext)m_context.getApplicationContext());
+            final DefaultListableBeanFactory factory = (DefaultListableBeanFactory)context.getBeanFactory();
+            factory.registerSingleton("temporaryDatabase", db);
+
+            return db;
         }
 
     }
