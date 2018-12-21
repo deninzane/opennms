@@ -58,14 +58,32 @@ public class DefaultBulkResult<T> implements BulkResultWrapper {
 
     @Override
     public List<FailedItem<T>> getFailedItems() {
+        int j = 0;
         final List<FailedItem<T>> failedItems = new ArrayList<>();
         for (int i = 0; i< rawResult.getItems().size(); i++) {
             final BulkResult.BulkResultItem bulkResultItem = rawResult.getItems().get(i);
             if (bulkResultItem.error != null && !bulkResultItem.error.isEmpty()) {
+                /* TODO: Reproduce with test case:
+                2018-12-21 13:31:23,906 | ERROR | sticAlarmIndexer | ElasticAlarmIndexer              | 332 - org.opennms.features.alarms.history.elastic - 24.0.0.SNAPSHOT | Handling of task failed.
+java.lang.IndexOutOfBoundsException: Index: 3, Size: 1
+        at java.util.ArrayList.rangeCheck(ArrayList.java:657) [?:?]
+        at java.util.ArrayList.get(ArrayList.java:433) [?:?]
+        at org.opennms.plugins.elasticsearch.rest.bulk.DefaultBulkResult.getFailedItems(DefaultBulkResult.java:66) [227:org.opennms.features.jest.client:24.0.0.SNAPSHOT]
+        at org.opennms.plugins.elasticsearch.rest.bulk.DefaultBulkResult.getFailedDocuments(DefaultBulkResult.java:81) [227:org.opennms.features.jest.client:24.0.0.SNAPSHOT]
+        at org.opennms.plugins.elasticsearch.rest.bulk.BulkRequest.execute(BulkRequest.java:70) [227:org.opennms.features.jest.client:24.0.0.SNAPSHOT]
+        at org.opennms.features.alarms.history.elastic.ElasticAlarmIndexer.bulkInsert(ElasticAlarmIndexer.java:321) [332:org.opennms.features.alarms.history.elastic:24.0.0.SNAPSHOT]
+        at org.opennms.features.alarms.history.elastic.ElasticAlarmIndexer$3.indexAlarms(ElasticAlarmIndexer.java:205) [332:org.opennms.features.alarms.history.elastic:24.0.0.SNAPSHOT]
+        at org.opennms.features.alarms.history.elastic.tasks.IndexAlarmsTask.visit(IndexAlarmsTask.java:46) [332:org.opennms.features.alarms.history.elastic:24.0.0.SNAPSHOT]
+        at org.opennms.features.alarms.history.elastic.ElasticAlarmIndexer.run(ElasticAlarmIndexer.java:198) [332:org.opennms.features.alarms.history.elastic:24.0.0.SNAPSHOT]
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149) [?:?]
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624) [?:?]
+        at java.lang.Thread.run(Thread.java:748) [?:?]
+                 */
                 final Exception cause = BulkUtils.convertToException(bulkResultItem.error);
-                final T failedObject = documents.get(i);
-                final FailedItem failedItem = new FailedItem(i, failedObject, cause);
+                final T failedObject = documents.get(j);
+                final FailedItem failedItem = new FailedItem(j, failedObject, cause);
                 failedItems.add(failedItem);
+                j++;
             }
         }
         return failedItems;
