@@ -38,6 +38,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.factory.Mappers;
 import org.opennms.core.cache.Cache;
+import org.opennms.core.utils.InetAddressUtils;
 import org.opennms.features.alarms.history.elastic.dto.AlarmDocumentDTO;
 import org.opennms.features.alarms.history.elastic.dto.NodeDocumentDTO;
 import org.opennms.netmgt.model.OnmsAlarm;
@@ -63,7 +64,7 @@ public interface AlarmMapper {
     AlarmDocumentDTO map(OnmsAlarm alarm, @Context MappingContext mappingContext);
     
     default String mapIpAddressToString(InetAddress ipAddress) {
-        return ipAddress == null ? null : ipAddress.toString();
+        return ipAddress == null ? null : InetAddressUtils.str(ipAddress);
     }
 
     default String mapServiceTypeToString(OnmsServiceType serviceType) {
