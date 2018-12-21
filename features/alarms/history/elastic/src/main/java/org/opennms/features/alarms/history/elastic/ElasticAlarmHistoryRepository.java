@@ -55,8 +55,6 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     public static final long DEFAULT_LOOKBACK_PERIOD_MS = TimeUnit.DAYS.toMillis(7);
 
-    public static final String INDEX_PREFIX = "opennms-alarms";
-
     private final JestClient client;
 
     private final IndexSelector indexSelector;
@@ -70,12 +68,12 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
     public ElasticAlarmHistoryRepository(JestClient client, IndexStrategy indexStrategy) {
         this.client = Objects.requireNonNull(client);
         this.indexStrategy = Objects.requireNonNull(indexStrategy);
-        this.indexSelector = new IndexSelector(INDEX_PREFIX, indexStrategy, 0);
+        this.indexSelector = new IndexSelector(ElasticAlarmIndexer.INDEX_PREFIX, indexStrategy, 0);
     }
 
     @Override
     public AlarmState getAlarmWithDbIdAt(long id, long time) {
-        TimeRange timeRange = getTimeRange(time);
+        final TimeRange timeRange = getTimeRange(time);
         return findAlarms(queryProvider.getAlarmByDbIdAt(id, timeRange), timeRange)
                 .stream().findFirst()
                 .orElse(null);
@@ -83,7 +81,7 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     @Override
     public AlarmState getAlarmWithReductionKeyIdAt(String reductionKey, long time) {
-        TimeRange timeRange = getTimeRange(time);
+        final TimeRange timeRange = getTimeRange(time);
         return findAlarms(queryProvider.getAlarmByReductionKeyAt(reductionKey, timeRange), timeRange)
                 .stream().findFirst()
                 .orElse(null);
@@ -107,15 +105,16 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
 
     @Override
     public List<AlarmState> getActiveAlarmsAt(long time) {
-        TimeRange timeRange = getTimeRange(time);
-        return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmsAt(time, Math.max(time - lookbackPeriodMs, 0), afterAlarmWithId)).stream()
+        final TimeRange timeRange = getTimeRange(time);
+        return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmsAt(timeRange, afterAlarmWithId), timeRange).stream()
                 .map(a -> (AlarmState)a)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<AlarmState> getLastStateOfAllAlarms(long start, long end) {
-        return findAlarmsWithCompositeAggregation(queryProvider::getAllAlarms).stream()
+        final TimeRange timeRange = new TimeRange(start, end);
+        return findAlarmsWithCompositeAggregation((afterAlarmWIthId) -> queryProvider.getAllAlarms(timeRange, afterAlarmWIthId), timeRange).stream()
                 .map(a -> (AlarmState)a)
                 .collect(Collectors.toList());
     }
@@ -123,7 +122,7 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
     @Override
     public long getNumActiveAlarmsAt(long time) {
         TimeRange timeRange = getTimeRange(time);
-        return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmIdsAt(time, Math.max(time - lookbackPeriodMs, 0), afterAlarmWithId)).size();
+        return findAlarmsWithCompositeAggregation((afterAlarmWithId) -> queryProvider.getActiveAlarmIdsAt(timeRange, afterAlarmWithId), timeRange).size();
     }
 
     @Override
@@ -136,19 +135,25 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
         return getNumActiveAlarmsAt(System.currentTimeMillis());
     }
 
-    private List<AlarmDocumentDTO> findAlarmsWithCompositeAggregation(Function<Integer,String> getNextQuery) {
+    private List<AlarmDocumentDTO> findAlarmsWithCompositeAggregation(Function<Integer,String> getNextQuery, TimeRange timeRange) {
         final List<AlarmDocumentDTO> alarms = new LinkedList<>();
         Integer afterAlarmWithId = null;
         while (true) {
             final String query = getNextQuery.apply(afterAlarmWithId);
-            final Search search = new Search.Builder(query)
-                    // TODO: Smarter indexing
-                    .addIndex("opennms-alarms-*")
-                    .addType(AlarmDocumentDTO.TYPE)
-                    .build();
+            final Search.Builder search = new Search.Builder(query)
+                    .addType(AlarmDocumentDTO.TYPE);
+            if (timeRange != null) {
+                final List<String> indices = indexSelector.getIndexNames(timeRange.getStart(), timeRange.getEnd());
+                search.addIndices(indices);
+                search.setParameter("ignore_unavailable", "true"); // ignore unknown index
+                LOG.debug("Executing query on {}: {}", indices, query);
+            } else {
+                search.addIndex("opennms-alarms-*");
+                LOG.debug("Executing query on all indices: {}", query);
+            }
             final SearchResult result;
             try {
-                result = client.execute(search);
+                result = client.execute(search.build());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -185,16 +190,16 @@ public class ElasticAlarmHistoryRepository implements AlarmHistoryRepository {
         return new TimeRange(Math.max(time - lookbackPeriodMs, 0), time);
     }
 
-    private List<AlarmDocumentDTO> findAlarms(String query, TimeRange timeRangeFilter) {
+    private List<AlarmDocumentDTO> findAlarms(String query, TimeRange timeRange) {
         final Search.Builder search = new Search.Builder(query).addType(AlarmDocumentDTO.TYPE);
-        if (timeRangeFilter != null) {
-            final List<String> indices = indexSelector.getIndexNames(timeRangeFilter.getStart(), timeRangeFilter.getEnd());
+        if (timeRange != null) {
+            final List<String> indices = indexSelector.getIndexNames(timeRange.getStart(), timeRange.getEnd());
             search.addIndices(indices);
             search.setParameter("ignore_unavailable", "true"); // ignore unknown index
-            LOG.debug("Executing asynchronous query on {}: {}", indices, query);
+            LOG.debug("Executing query on {}: {}", indices, query);
         } else {
             search.addIndex("opennms-alarms-*");
-            LOG.debug("Executing asynchronous query on all indices: {}", query);
+            LOG.debug("Executing query on all indices: {}", query);
         }
 
         final SearchResult result;

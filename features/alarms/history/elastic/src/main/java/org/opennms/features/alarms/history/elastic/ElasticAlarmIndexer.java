@@ -56,10 +56,10 @@ import org.opennms.core.cache.Cache;
 import org.opennms.core.cache.CacheBuilder;
 import org.opennms.core.cache.CacheConfig;
 import org.opennms.core.time.PseudoClock;
+import org.opennms.core.utils.UniMapper;
 import org.opennms.features.alarms.history.elastic.dto.AlarmDocumentDTO;
 import org.opennms.features.alarms.history.elastic.dto.AlarmDocumentFactory;
 import org.opennms.features.alarms.history.elastic.dto.NodeDocumentDTO;
-import org.opennms.core.utils.UniMapper;
 import org.opennms.features.alarms.history.elastic.mapping.MapStructDocumentImpl;
 import org.opennms.features.alarms.history.elastic.tasks.BulkDeleteTask;
 import org.opennms.features.alarms.history.elastic.tasks.IndexAlarmsTask;
@@ -72,6 +72,7 @@ import org.opennms.plugins.elasticsearch.rest.bulk.BulkException;
 import org.opennms.plugins.elasticsearch.rest.bulk.BulkRequest;
 import org.opennms.plugins.elasticsearch.rest.bulk.BulkWrapper;
 import org.opennms.plugins.elasticsearch.rest.bulk.FailedItem;
+import org.opennms.plugins.elasticsearch.rest.index.IndexSelector;
 import org.opennms.plugins.elasticsearch.rest.index.IndexStrategy;
 import org.opennms.plugins.elasticsearch.rest.template.TemplateInitializer;
 import org.slf4j.Logger;
@@ -97,6 +98,7 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
     private static final Gson gson = new Gson();
 
     public static final int DEFAULT_TASK_QUEUE_CAPACITY = 5000;
+    public static final String INDEX_PREFIX = "opennms-alarms";
 
     private final AlarmCallbackStateTracker stateTracker = new AlarmCallbackStateTracker();
     private final QueryProvider queryProvider = new QueryProvider();
@@ -104,11 +106,11 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
     private final JestClient client;
     private final TemplateInitializer templateInitializer;
     private final LinkedBlockingDeque<Task> taskQueue;
+    private final IndexStrategy indexStrategy;
+    private final IndexSelector indexSelector;
 
-    private IndexStrategy indexStrategy = IndexStrategy.MONTHLY;
     private int bulkRetryCount = 3;
     private int batchSize = 200;
-    private final String alarmIndexPrefix = "opennms-alarms";
     private boolean usePseudoClock = false;
     private boolean indexAllUpdates = false;
 
@@ -138,10 +140,10 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
     private final ElasticAlarmMetrics alarmsToESMetrics;
 
     public ElasticAlarmIndexer(MetricRegistry metrics, JestClient client, TemplateInitializer templateInitializer) {
-        this(metrics, client, templateInitializer, new CacheConfig("nodes-for-alarms-in-es"), DEFAULT_TASK_QUEUE_CAPACITY);
+        this(metrics, client, templateInitializer, new CacheConfig("nodes-for-alarms-in-es"), DEFAULT_TASK_QUEUE_CAPACITY, IndexStrategy.MONTHLY);
     }
 
-    public ElasticAlarmIndexer(MetricRegistry metrics, JestClient client, TemplateInitializer templateInitializer, CacheConfig nodeCacheConfig, int taskQueueCapacity) {
+    public ElasticAlarmIndexer(MetricRegistry metrics, JestClient client, TemplateInitializer templateInitializer, CacheConfig nodeCacheConfig, int taskQueueCapacity, IndexStrategy indexStrategy) {
         this.client = Objects.requireNonNull(client);
         this.templateInitializer = Objects.requireNonNull(templateInitializer);
         //noinspection unchecked
@@ -158,6 +160,8 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
         documentFactory = documentImpl;
         taskQueue = new LinkedBlockingDeque<>(taskQueueCapacity);
         alarmsToESMetrics = new ElasticAlarmMetrics(metrics, taskQueue);
+        this.indexStrategy = Objects.requireNonNull(indexStrategy);
+        this.indexSelector = new IndexSelector(INDEX_PREFIX, indexStrategy, 0);
     }
 
     public void init() {
@@ -221,15 +225,19 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
                             final List<AlarmDocumentDTO> alarms = new LinkedList<>();
                             Integer afterAlarmWithId = null;
                             while (true) {
-                                final String query = queryProvider.getActiveAlarmIdsAtTimeAndExclude(time, includeUpdatesAfter, alarmIdsToKeep, afterAlarmWithId);
-                                final Search search = new Search.Builder(query)
-                                        // TODO: Smarter indexing
-                                        .addIndex("opennms-alarms-*")
-                                        .addType(AlarmDocumentDTO.TYPE)
-                                        .build();
+                                final TimeRange timeRange = new TimeRange(includeUpdatesAfter, time);
+                                final String query = queryProvider.getActiveAlarmIdsAtTimeAndExclude(timeRange, alarmIdsToKeep, afterAlarmWithId);
+
+                                final Search.Builder search = new Search.Builder(query)
+                                        .addType(AlarmDocumentDTO.TYPE);
+                                final List<String> indices = indexSelector.getIndexNames(timeRange.getStart(), timeRange.getEnd());
+                                search.addIndices(indices);
+                                search.setParameter("ignore_unavailable", "true"); // ignore unknown index
+                                LOG.debug("Executing query on {}: {}", indices, query);
+
                                 final SearchResult result;
                                 try {
-                                    result = client.execute(search);
+                                    result = client.execute(search.build());
                                 } catch (IOException e) {
                                     LOG.error("Querying for active alarms failed.", e);
                                     return;
@@ -295,7 +303,7 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
         final BulkRequest<AlarmDocumentDTO> bulkRequest = new BulkRequest<>(client, alarmDocuments, (documents) -> {
             final Bulk.Builder bulkBuilder = new Bulk.Builder();
             for (AlarmDocumentDTO alarmDocument : alarmDocuments) {
-                final String index = indexStrategy.getIndex(alarmIndexPrefix, Instant.ofEpochMilli(alarmDocument.getUpdateTime()));
+                final String index = indexStrategy.getIndex(INDEX_PREFIX, Instant.ofEpochMilli(alarmDocument.getUpdateTime()));
                 final Index.Builder indexBuilder = new Index.Builder(alarmDocument)
                         .index(index)
                         .type(AlarmDocumentDTO.TYPE);
@@ -478,10 +486,6 @@ public class ElasticAlarmIndexer implements AlarmLifecycleListener, Runnable {
 
     public void setLookbackPeriodMs(long lookbackPeriodMs) {
         this.lookbackPeriodMs = lookbackPeriodMs;
-    }
-
-    public void setIndexStrategy(IndexStrategy indexStrategy) {
-        this.indexStrategy = indexStrategy;
     }
 
     public void setUsePseudoClock(boolean usePseudoClock) {

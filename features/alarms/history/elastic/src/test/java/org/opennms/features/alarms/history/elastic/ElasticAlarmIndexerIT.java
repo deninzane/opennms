@@ -46,6 +46,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.opennms.core.test.MockLogAppender;
 import org.opennms.core.test.elastic.ElasticSearchRule;
 import org.opennms.core.test.elastic.ElasticSearchServerConfig;
 import org.opennms.core.time.PseudoClock;
@@ -81,7 +82,7 @@ public class ElasticAlarmIndexerIT {
 
     @BeforeClass
     public static void classSetUp() {
-        //MockLogAppender.setupLogging(true, "DEBUG");
+        MockLogAppender.setupLogging(true, "DEBUG");
         Awaitility.setDefaultPollDelay(1, TimeUnit.SECONDS);
         Awaitility.setDefaultPollInterval(5, TimeUnit.SECONDS);
     }

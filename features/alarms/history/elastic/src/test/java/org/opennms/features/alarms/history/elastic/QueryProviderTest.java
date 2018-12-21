@@ -51,9 +51,9 @@ public class QueryProviderTest {
         QueryProvider queryProvider = new QueryProvider();
         validate(queryProvider.getAlarmByDbIdAt(1, new TimeRange(1, 1)));
         validate(queryProvider.getAlarmByReductionKeyAt("string-with-some-special-characters\"\r\n[]{}\t+'", new TimeRange(1, 1)));
-        validate(queryProvider.getActiveAlarmsAt(1, 1, null));
-        validate(queryProvider.getAllAlarms(99));
-        validate(queryProvider.getActiveAlarmIdsAtTimeAndExclude(1,1, Collections.emptySet(),null));
+        validate(queryProvider.getActiveAlarmsAt(new TimeRange(1, 1), null));
+        validate(queryProvider.getAllAlarms(new TimeRange(1, 1), 1));
+        validate(queryProvider.getActiveAlarmIdsAtTimeAndExclude(new TimeRange(1, 1), Collections.emptySet(),null));
     }
 
     private void validate(String query) {

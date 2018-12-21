@@ -133,7 +133,7 @@
         <argument ref="templateInitializer" />
         <argument ref="nodeCacheConfig" />
         <argument value="${taskQueueCapacity}"/>
-        <property name="indexStrategy" ref="indexStrategy"/>
+        <argument ref="indexStrategy"/>
         <property name="bulkRetryCount" value="${bulkRetryCount}" />
         <property name="batchSize" value="${batchIndexSize}" />
         <property name="alarmReindexDurationMs" value="${alarmReindexDurationMs}"/>

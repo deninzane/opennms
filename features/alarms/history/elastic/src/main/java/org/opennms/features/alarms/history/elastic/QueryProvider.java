@@ -93,10 +93,10 @@ public class QueryProvider {
                 .build());
     }
 
-    public String getActiveAlarmsAt(long time, long after, Integer afterAlarmWithId) {
+    public String getActiveAlarmsAt(TimeRange timeRange, Integer afterAlarmWithId) {
         final ImmutableMap.Builder<Object,Object> builder = ImmutableMap.builder()
-                .put("fromMillis", after)
-                .put("toMillis", time)
+                .put("fromMillis", timeRange.getStart())
+                .put("toMillis", timeRange.getEnd())
                 .put("maxBuckets", MAX_BUCKETS)
                 .put("idOnly", false);
         if (afterAlarmWithId != null) {
@@ -105,10 +105,10 @@ public class QueryProvider {
         return render("get_alarms_at.ftl", builder.build());
     }
 
-    public String getActiveAlarmIdsAt(long time, long after, Integer afterAlarmWithId) {
+    public String getActiveAlarmIdsAt(TimeRange timeRange, Integer afterAlarmWithId) {
         final ImmutableMap.Builder<Object,Object> builder = ImmutableMap.builder()
-                .put("fromMillis", after)
-                .put("toMillis", time)
+                .put("fromMillis", timeRange.getStart())
+                .put("toMillis", timeRange.getEnd())
                 .put("maxBuckets", MAX_BUCKETS)
                 .put("idOnly", true);
         if (afterAlarmWithId != null) {
@@ -117,10 +117,10 @@ public class QueryProvider {
         return render("get_alarms_at.ftl", builder.build());
     }
 
-    public String getActiveAlarmIdsAtTimeAndExclude(long time, long after, Set<Integer> alarmIdsToKeep, Integer afterAlarmWithId) {
+    public String getActiveAlarmIdsAtTimeAndExclude(TimeRange timeRange, Set<Integer> alarmIdsToKeep, Integer afterAlarmWithId) {
         final ImmutableMap.Builder<Object,Object> builder = ImmutableMap.builder()
-                .put("fromMillis", after)
-                .put("toMillis", time)
+                .put("fromMillis", timeRange.getStart())
+                .put("toMillis", timeRange.getEnd())
                 .put("maxBuckets", MAX_BUCKETS)
                 .put("alarmIdsToExclude", alarmIdsToKeep)
                 .put("idOnly", true);
@@ -130,7 +130,8 @@ public class QueryProvider {
         return render("get_alarms_at.ftl", builder.build());
     }
 
-    public String getAllAlarms(Integer afterAlarmWithId) {
+    public String getAllAlarms(TimeRange timeRange, Integer afterAlarmWithId) {
+        // TODO: Use the timeRange
         ImmutableMap.Builder<Object,Object> builder = ImmutableMap.builder()
                 .put("maxBuckets", MAX_BUCKETS);
         if (afterAlarmWithId != null) {
