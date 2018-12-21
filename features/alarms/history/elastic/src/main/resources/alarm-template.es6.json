@@ -83,7 +83,7 @@
           "type": "integer"
         },
         "ip_address": {
-          "type": "text"
+          "type": "ip"
         },
         "journal_memo": {
           "dynamic": true,
@@ -127,10 +127,10 @@
           "type": "text"
         },
         "managed_object_instance": {
-          "type": "text"
+          "type": "keyword"
         },
         "managed_object_type": {
-          "type": "text"
+          "type": "keyword"
         },
         "mouse_over_text": {
           "type": "text"
@@ -213,10 +213,10 @@
               "type": "date"
             },
             "managed_object_instance": {
-              "type": "text"
+              "type": "keyword"
             },
             "managed_object_type": {
-              "type": "text"
+              "type": "keyword"
             },
             "reduction_key": {
               "type": "keyword"
@@ -279,7 +279,7 @@
           "type": "integer"
         },
         "ticket_state_name": {
-          "type": "text"
+          "type": "keyword"
         },
         "type": {
           "type": "integer"
